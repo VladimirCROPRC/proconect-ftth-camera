@@ -177,7 +177,7 @@ function Dashboard() {
           [
             ["projects", `Proiecte (${projects.length})`],
             ["users", `Utilizatori (${users.length})`],
-            ["readings", `Măsurători (${readings.length})`],
+
           ] as const
         ).map(([key, label]) => (
           <button
