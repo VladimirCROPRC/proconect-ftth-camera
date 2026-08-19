@@ -192,7 +192,7 @@ export const listProjects = createServerFn({ method: "GET" })
     const { data: projects, error } = await context.supabase
       .from("projects")
       .select(
-        "id, name, code, notes, drive_folder_url, spreadsheet_url, created_at",
+        "id, name, code, notes, odb_total, drive_folder_url, spreadsheet_url, created_at",
       )
       .order("created_at", { ascending: false });
     if (error) throw new Error(error.message);
@@ -200,20 +200,34 @@ export const listProjects = createServerFn({ method: "GET" })
     const { data: assignments } = await context.supabase
       .from("project_assignments")
       .select("project_id, user_id");
-    const { data: readings } = await context.supabase.from("readings").select("project_id");
+    const { data: readings } = await context.supabase
+      .from("readings")
+      .select("project_id, odb_name");
 
-    return (projects ?? []).map((p) => ({
-      id: p.id,
-      name: p.name,
-      code: p.code,
-      notes: p.notes,
-      driveFolderUrl: p.drive_folder_url,
-      spreadsheetUrl: p.spreadsheet_url,
-      createdAt: p.created_at,
-      assignedUserIds: (assignments ?? []).filter((a) => a.project_id === p.id).map((a) => a.user_id),
-      readingCount: (readings ?? []).filter((r) => r.project_id === p.id).length,
-    }));
+    return (projects ?? []).map((p) => {
+      const own = (readings ?? []).filter((r) => r.project_id === p.id);
+      const distinct = new Set(
+        own.map((r) => (r.odb_name ?? "").trim().toUpperCase()).filter(Boolean),
+      );
+      return {
+        id: p.id,
+        name: p.name,
+        code: p.code,
+        notes: p.notes,
+        driveFolderUrl: p.drive_folder_url,
+        spreadsheetUrl: p.spreadsheet_url,
+        createdAt: p.created_at,
+        assignedUserIds: (assignments ?? [])
+          .filter((a) => a.project_id === p.id)
+          .map((a) => a.user_id),
+        readingCount: own.length,
+        odbTotal: p.odb_total ?? 0,
+        odbDone: distinct.size,
+      };
+    });
   });
+
+
 
 /** Creates a project plus its Google Drive folder and live Google Sheet. */
 export const createProject = createServerFn({ method: "POST" })
