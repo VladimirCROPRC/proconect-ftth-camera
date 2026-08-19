@@ -195,22 +195,42 @@ function Dashboard() {
               <h2 className="mb-4 flex items-center gap-2 text-base font-semibold">
                 <FolderPlus className="size-4 text-brand" /> Proiect nou
               </h2>
-              <div className="grid gap-2.5 sm:grid-cols-3">
-                <input
-                  value={newProject.name}
-                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                  className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm outline-none focus:border-brand-2"
-                />
-                <input
-                  value={newProject.code}
-                  onChange={(e) => setNewProject({ ...newProject, code: e.target.value })}
-                  className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm outline-none focus:border-brand-2"
-                />
-                <input
-                  value={newProject.notes}
-                  onChange={(e) => setNewProject({ ...newProject, notes: e.target.value })}
-                  className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm outline-none focus:border-brand-2"
-                />
+              <div className="grid gap-2.5 sm:grid-cols-4">
+                <label className="grid gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Nume proiect
+                  <input
+                    value={newProject.name}
+                    onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                    className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:border-brand-2"
+                  />
+                </label>
+                <label className="grid gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Cod
+                  <input
+                    value={newProject.code}
+                    onChange={(e) => setNewProject({ ...newProject, code: e.target.value })}
+                    className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:border-brand-2"
+                  />
+                </label>
+                <label className="grid gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Număr total ODB
+                  <input
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    value={newProject.odbTotal}
+                    onChange={(e) => setNewProject({ ...newProject, odbTotal: e.target.value })}
+                    className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:border-brand-2"
+                  />
+                </label>
+                <label className="grid gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Observații
+                  <input
+                    value={newProject.notes}
+                    onChange={(e) => setNewProject({ ...newProject, notes: e.target.value })}
+                    className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:border-brand-2"
+                  />
+                </label>
               </div>
               <button
                 type="button"
@@ -222,9 +242,10 @@ function Dashboard() {
                         name: newProject.name.trim(),
                         code: newProject.code.trim() || undefined,
                         notes: newProject.notes.trim() || undefined,
+                        odbTotal: Number(newProject.odbTotal) || 0,
                       },
                     });
-                    setNewProject({ name: "", code: "", notes: "" });
+                    setNewProject({ name: "", code: "", notes: "", odbTotal: "" });
                   })
                 }
                 className="mt-3 flex min-h-[46px] items-center justify-center gap-2 rounded-[10px] bg-brand px-4 text-xs font-bold text-white hover:bg-brand-dark disabled:opacity-45"
@@ -236,6 +257,7 @@ function Dashboard() {
                 Se creează automat folderul pe Google Drive și fișierul Excel/Sheet cu ODB,
                 coordonate și valori optice.
               </p>
+
             </section>
           )}
 
