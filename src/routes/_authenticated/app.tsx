@@ -213,6 +213,8 @@ function FieldApp() {
     canvas.height = video.videoHeight;
     canvas.getContext("2d")?.drawImage(video, 0, 0);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    setStamped(null);
+    setTakenAt(new Date());
     setShot(dataUrl);
     locate();
     await interpret(dataUrl);
@@ -222,6 +224,8 @@ function FieldApp() {
     const fr = new FileReader();
     fr.onload = async () => {
       const dataUrl = String(fr.result);
+      setStamped(null);
+      setTakenAt(new Date());
       setShot(dataUrl);
       locate();
       await interpret(dataUrl);
@@ -229,7 +233,23 @@ function FieldApp() {
     fr.readAsDataURL(file);
   };
 
-  const ready = Boolean(shot) && projectId !== "" && odb.trim() !== "";
+  // Burn timestamp + coordinates into the photo (re-runs when GPS lands)
+  useEffect(() => {
+    if (!shot || !takenAt) {
+      setStamped(null);
+      return;
+    }
+    let active = true;
+    stampPhoto(shot, takenAt, coords)
+      .then((out) => {
+        if (active) setStamped(out);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [shot, takenAt, coords]);
+
 
   const save = async () => {
     if (!shot || !projectId) return;
