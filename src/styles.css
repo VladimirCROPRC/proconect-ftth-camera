@@ -117,5 +117,26 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
+    font-family: var(--font-sans);
+    background-image: radial-gradient(
+      120% 60% at 50% 0%,
+      oklch(0.26 0.03 250) 0%,
+      transparent 70%
+    );
+    background-attachment: fixed;
   }
 }
+
+@utility panel-surface {
+  background-color: var(--color-panel);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-panel);
+}
+
+@utility readout {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
