@@ -270,9 +270,7 @@ function FieldApp() {
       <div className="grid gap-4 lg:grid-cols-3">
         <section className="panel-surface p-4 lg:col-span-3">
           <label htmlFor="project" className="block">
-            <span className="mb-1.5 block text-[11px] font-bold text-muted-foreground">
-              Proiect (folderul din Google Drive)
-            </span>
+            <span className="mb-1.5 block text-[11px] font-bold text-muted-foreground">Proiect</span>
             <select
               id="project"
               value={projectId}
@@ -292,18 +290,7 @@ function FieldApp() {
               Nu ai încă proiecte alocate. Cere administratorului să te aloce pe un proiect.
             </p>
           )}
-          {project?.driveFolderUrl && (
-            <div className="mt-2 flex flex-wrap gap-3 text-[11px] font-bold text-brand">
-              <a href={project.driveFolderUrl} target="_blank" rel="noopener" className="flex items-center gap-1">
-                <ExternalLink className="size-3.5" /> Folder Drive
-              </a>
-              {project.spreadsheetUrl && (
-                <a href={project.spreadsheetUrl} target="_blank" rel="noopener" className="flex items-center gap-1">
-                  <ExternalLink className="size-3.5" /> Fișier Excel/Sheet
-                </a>
-              )}
-            </div>
-          )}
+
         </section>
 
         <section className="panel-surface relative min-h-[280px] overflow-hidden">
