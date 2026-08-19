@@ -254,6 +254,7 @@ export const createProject = createServerFn({ method: "POST" })
         name: data.name,
         code: data.code ?? null,
         notes: data.notes ?? null,
+        odb_total: data.odbTotal ?? 0,
         drive_folder_id: drive.folderId,
         drive_folder_url: drive.folderUrl,
         spreadsheet_id: drive.spreadsheetId,
