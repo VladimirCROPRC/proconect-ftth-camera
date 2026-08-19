@@ -83,7 +83,7 @@ function Dashboard() {
     fullName: "",
     role: "field" as ManagedUser["role"],
   });
-  const [newProject, setNewProject] = useState({ name: "", code: "", notes: "" });
+  const [newProject, setNewProject] = useState({ name: "", code: "", notes: "", odbTotal: "" });
 
   const isAdmin = session?.role === "admin";
 
@@ -195,22 +195,42 @@ function Dashboard() {
               <h2 className="mb-4 flex items-center gap-2 text-base font-semibold">
                 <FolderPlus className="size-4 text-brand" /> Proiect nou
               </h2>
-              <div className="grid gap-2.5 sm:grid-cols-3">
-                <input
-                  value={newProject.name}
-                  onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                  className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm outline-none focus:border-brand-2"
-                />
-                <input
-                  value={newProject.code}
-                  onChange={(e) => setNewProject({ ...newProject, code: e.target.value })}
-                  className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm outline-none focus:border-brand-2"
-                />
-                <input
-                  value={newProject.notes}
-                  onChange={(e) => setNewProject({ ...newProject, notes: e.target.value })}
-                  className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm outline-none focus:border-brand-2"
-                />
+              <div className="grid gap-2.5 sm:grid-cols-4">
+                <label className="grid gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Nume proiect
+                  <input
+                    value={newProject.name}
+                    onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                    className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:border-brand-2"
+                  />
+                </label>
+                <label className="grid gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Cod
+                  <input
+                    value={newProject.code}
+                    onChange={(e) => setNewProject({ ...newProject, code: e.target.value })}
+                    className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:border-brand-2"
+                  />
+                </label>
+                <label className="grid gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Număr total ODB
+                  <input
+                    type="number"
+                    min={0}
+                    inputMode="numeric"
+                    value={newProject.odbTotal}
+                    onChange={(e) => setNewProject({ ...newProject, odbTotal: e.target.value })}
+                    className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:border-brand-2"
+                  />
+                </label>
+                <label className="grid gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                  Observații
+                  <input
+                    value={newProject.notes}
+                    onChange={(e) => setNewProject({ ...newProject, notes: e.target.value })}
+                    className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm font-normal normal-case tracking-normal text-foreground outline-none focus:border-brand-2"
+                  />
+                </label>
               </div>
               <button
                 type="button"
@@ -222,9 +242,10 @@ function Dashboard() {
                         name: newProject.name.trim(),
                         code: newProject.code.trim() || undefined,
                         notes: newProject.notes.trim() || undefined,
+                        odbTotal: Number(newProject.odbTotal) || 0,
                       },
                     });
-                    setNewProject({ name: "", code: "", notes: "" });
+                    setNewProject({ name: "", code: "", notes: "", odbTotal: "" });
                   })
                 }
                 className="mt-3 flex min-h-[46px] items-center justify-center gap-2 rounded-[10px] bg-brand px-4 text-xs font-bold text-white hover:bg-brand-dark disabled:opacity-45"
@@ -236,6 +257,7 @@ function Dashboard() {
                 Se creează automat folderul pe Google Drive și fișierul Excel/Sheet cu ODB,
                 coordonate și valori optice.
               </p>
+
             </section>
           )}
 
@@ -255,6 +277,33 @@ function Dashboard() {
                       {p.readingCount} măsurători · creat{" "}
                       {new Date(p.createdAt).toLocaleDateString("ro-RO")}
                     </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-bold">
+                      <span className="rounded-full bg-brand/10 px-2.5 py-1 text-brand">
+                        ODB total: {p.odbTotal || "—"}
+                      </span>
+                      <span className="rounded-full bg-emerald-500/12 px-2.5 py-1 text-emerald-700">
+                        Finalizate: {p.odbDone}
+                      </span>
+                      <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-amber-700">
+                        Rămase: {Math.max(0, p.odbTotal - p.odbDone)}
+                      </span>
+                      {p.odbTotal > 0 && (
+                        <span className="text-muted-foreground">
+                          {Math.min(100, Math.round((p.odbDone / p.odbTotal) * 100))}%
+                        </span>
+                      )}
+                    </div>
+                    {p.odbTotal > 0 && (
+                      <div className="mt-2 h-1.5 w-full max-w-[320px] overflow-hidden rounded-full bg-border">
+                        <div
+                          className="h-full rounded-full bg-brand"
+                          style={{
+                            width: `${Math.min(100, (p.odbDone / p.odbTotal) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    )}
+
                     <div className="mt-2 flex flex-wrap gap-3 text-[11px] font-bold text-brand">
                       {p.driveFolderUrl && (
                         <a href={p.driveFolderUrl} target="_blank" rel="noopener" className="flex items-center gap-1">
