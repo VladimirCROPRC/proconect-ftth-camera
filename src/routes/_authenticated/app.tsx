@@ -531,16 +531,6 @@ function FieldApp() {
                       : "fără GPS"}{" "}
                     · {new Date(r.createdAt).toLocaleString("ro-RO")}
                   </p>
-                  {r.driveFileUrl && (
-                    <a
-                      href={r.driveFileUrl}
-                      target="_blank"
-                      rel="noopener"
-                      className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-brand"
-                    >
-                      <ExternalLink className="size-3" /> Fotografie
-                    </a>
-                  )}
                 </li>
               ))}
             </ul>
