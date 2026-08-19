@@ -5,7 +5,6 @@ import {
   Camera,
   CloudUpload,
   Crosshair,
-  ExternalLink,
   LayoutDashboard,
   Loader2,
   LogOut,
@@ -29,12 +28,12 @@ export const Route = createFileRoute("/_authenticated/app")({
       {
         name: "description",
         content:
-          "Fotografiază powermetrul, valorile 1490/1550 nm sunt citite automat și urcate în folderul proiectului pe Google Drive.",
+          "Fotografiază powermetrul, valorile 1490/1550 nm sunt citite automat, iar fotografia este marcată cu data și coordonatele GPS.",
       },
       { property: "og:title", content: "Măsurători de teren · PRO CONECT GIS TOOLS" },
       {
         property: "og:description",
-        content: "Capturi geotagate, valori optice și sincronizare automată în Google Drive.",
+        content: "Capturi geotagate cu dată, coordonate și valori optice 1490/1550 nm.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -48,6 +47,42 @@ type Coords = { lat: number; lng: number; accuracy: number } | null;
 function fmt(v: number | null) {
   return v === null ? "—" : v.toFixed(2);
 }
+
+/** Burns a timestamp + GPS coordinates band onto the bottom of the photo. */
+async function stampPhoto(dataUrl: string, takenAt: Date, coords: Coords): Promise<string> {
+  const img = new Image();
+  img.src = dataUrl;
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("imagine invalidă"));
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0);
+
+  const lines = [
+    takenAt.toLocaleString("ro-RO"),
+    coords
+      ? `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}  ±${Math.round(coords.accuracy)} m`
+      : "GPS indisponibil",
+  ];
+  const size = Math.max(16, Math.round(canvas.width * 0.032));
+  const pad = Math.round(size * 0.55);
+  const bandH = lines.length * (size * 1.28) + pad * 2;
+  ctx.fillStyle = "rgba(0, 45, 88, 0.72)";
+  ctx.fillRect(0, canvas.height - bandH, canvas.width, bandH);
+  ctx.fillStyle = "#ffffff";
+  ctx.textBaseline = "top";
+  ctx.font = `600 ${size}px ui-monospace, "JetBrains Mono", monospace`;
+  lines.forEach((line, i) => {
+    ctx.fillText(line, pad, canvas.height - bandH + pad + i * size * 1.28);
+  });
+  return canvas.toDataURL("image/jpeg", 0.88);
+}
+
 
 function FieldApp() {
   const navigate = useNavigate();
