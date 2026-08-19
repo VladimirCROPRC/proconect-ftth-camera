@@ -83,7 +83,7 @@ function Dashboard() {
     fullName: "",
     role: "field" as ManagedUser["role"],
   });
-  const [newProject, setNewProject] = useState({ name: "", code: "", notes: "" });
+  const [newProject, setNewProject] = useState({ name: "", code: "", notes: "", odbTotal: "" });
 
   const isAdmin = session?.role === "admin";
 
