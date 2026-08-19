@@ -48,6 +48,7 @@ function GpsCamera() {
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [rows, setRows] = useState<GpsPhoto[]>([]);
   const [busy, setBusy] = useState(false);
+  const [retakeId, setRetakeId] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     listPhotos()
