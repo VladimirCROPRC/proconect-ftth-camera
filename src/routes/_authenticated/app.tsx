@@ -103,6 +103,9 @@ function FieldApp() {
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [shot, setShot] = useState<string | null>(null);
+  const [takenAt, setTakenAt] = useState<Date | null>(null);
+  const [stamped, setStamped] = useState<string | null>(null);
+
   const [coords, setCoords] = useState<Coords>(null);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [reading, setReading] = useState(false);
