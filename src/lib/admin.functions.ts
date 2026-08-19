@@ -38,6 +38,8 @@ export type ManagedProject = {
   createdAt: string;
   assignedUserIds: string[];
   readingCount: number;
+  odbTotal: number;
+  odbDone: number;
 };
 
 /** True when at least one admin account exists (used to gate first-run setup). */
