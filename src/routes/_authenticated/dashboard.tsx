@@ -197,19 +197,16 @@ function Dashboard() {
               </h2>
               <div className="grid gap-2.5 sm:grid-cols-3">
                 <input
-                  placeholder="Nume proiect"
                   value={newProject.name}
                   onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
                   className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm outline-none focus:border-brand-2"
                 />
                 <input
-                  placeholder="Cod (opțional)"
                   value={newProject.code}
                   onChange={(e) => setNewProject({ ...newProject, code: e.target.value })}
                   className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm outline-none focus:border-brand-2"
                 />
                 <input
-                  placeholder="Observații (opțional)"
                   value={newProject.notes}
                   onChange={(e) => setNewProject({ ...newProject, notes: e.target.value })}
                   className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm outline-none focus:border-brand-2"
@@ -328,20 +325,17 @@ function Dashboard() {
               </h2>
               <div className="grid gap-2.5 sm:grid-cols-4">
                 <input
-                  placeholder="Utilizator"
                   value={newUser.username}
                   autoCapitalize="none"
                   onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
                   className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm outline-none focus:border-brand-2"
                 />
                 <input
-                  placeholder="Nume complet"
                   value={newUser.fullName}
                   onChange={(e) => setNewUser({ ...newUser, fullName: e.target.value })}
                   className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm outline-none focus:border-brand-2"
                 />
                 <input
-                  placeholder="Parolă (min. 8)"
                   value={newUser.password}
                   onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
                   className="h-11 rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm outline-none focus:border-brand-2"

@@ -468,8 +468,8 @@ function FieldApp() {
           </div>
           <div className="grid gap-2.5 sm:grid-cols-2">
             {[
-              { id: "v1490", tag: "1490 nm", dot: "var(--brand-2)", value: v1490, set: setV1490, ph: "-18.45" },
-              { id: "v1550", tag: "1550 nm", dot: "#e2a600", value: v1550, set: setV1550, ph: "-20.10" },
+              { id: "v1490", tag: "1490 nm", dot: "var(--brand-2)", value: v1490, set: setV1490 },
+              { id: "v1550", tag: "1550 nm", dot: "#e2a600", value: v1550, set: setV1550 },
             ].map((f) => (
               <label key={f.id} htmlFor={f.id} className="block">
                 <span className="mb-1.5 ml-0.5 flex items-center gap-1.5 text-[11px] font-bold text-muted-foreground">
@@ -482,7 +482,6 @@ function FieldApp() {
                     inputMode="decimal"
                     value={f.value}
                     onChange={(e) => f.set(e.target.value)}
-                    placeholder={f.ph}
                     className="readout w-full min-w-0 border-0 bg-transparent text-[19px] font-bold text-foreground outline-none"
                   />
                   <b className="text-[9px] text-muted-foreground">{unit}</b>
@@ -499,7 +498,6 @@ function FieldApp() {
               id="odb"
               value={odb}
               onChange={(e) => setOdb(e.target.value)}
-              placeholder="ODB-1234 / Str. Aviatorilor 12"
               className="h-11 w-full rounded-[10px] border border-border bg-[#fbfcfe] px-3 text-sm outline-none focus:border-brand-2"
             />
           </label>
