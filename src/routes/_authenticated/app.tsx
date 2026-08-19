@@ -108,6 +108,16 @@ function FieldApp() {
     refreshReadings(projectId);
   }, [projectId, refreshReadings]);
 
+  // Re-attach the live stream whenever we go back to the preview (after "Refă fotografia")
+  useEffect(() => {
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (shot || !cameraOn || !video || !stream) return;
+    if (video.srcObject !== stream) video.srcObject = stream;
+    void video.play().catch(() => undefined);
+  }, [shot, cameraOn]);
+
+
   const startCamera = async () => {
     setCameraError(null);
     try {
@@ -298,9 +308,21 @@ function FieldApp() {
 
         <section className="panel-surface relative min-h-[280px] overflow-hidden">
           <div className="relative h-[280px] bg-black/90">
+            <video
+              ref={videoRef}
+              playsInline
+              muted
+              autoPlay
+              className="h-full w-full object-cover"
+              style={{ display: cameraOn && !shot ? "block" : "none" }}
+            />
             {shot ? (
               <>
-                <img src={shot} alt="Fotografia powermetrului" className="h-full w-full object-cover" />
+                <img
+                  src={shot}
+                  alt="Fotografia powermetrului"
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
                 <div
                   className="absolute inset-x-3 bottom-3 flex items-center justify-between gap-2.5 rounded-[10px] px-3 py-2.5 text-[11px] font-bold text-white"
                   style={{ background: "rgba(0,70,138,.88)" }}
@@ -313,13 +335,6 @@ function FieldApp() {
               </>
             ) : (
               <>
-                <video
-                  ref={videoRef}
-                  playsInline
-                  muted
-                  className="h-full w-full object-cover"
-                  style={{ display: cameraOn ? "block" : "none" }}
-                />
                 {!cameraOn && (
                   <button
                     type="button"
@@ -345,6 +360,7 @@ function FieldApp() {
               </>
             )}
           </div>
+
 
           <div className="flex flex-wrap gap-2 border-t border-border p-3">
             {!shot ? (
