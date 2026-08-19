@@ -80,7 +80,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
         name: "viewport",
         content: "width=device-width, initial-scale=1, viewport-fit=cover",
       },
-      { title: "PRO CONECT GIS TOOLS · Măsurători optice" },
+      { title: "Proconect FTTH Camera · Măsurători optice" },
       {
         name: "description",
         content: "Măsurători optice geotagate 1490/1550 nm, salvate local pe telefon.",
@@ -89,8 +89,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-      { name: "apple-mobile-web-app-title", content: "Măsurători optice" },
-      { property: "og:title", content: "PRO CONECT GIS TOOLS · Măsurători optice" },
+      { name: "apple-mobile-web-app-title", content: "FTTH Camera" },
+      { property: "og:title", content: "Proconect FTTH Camera · Măsurători optice" },
       {
         property: "og:description",
         content: "Măsurători optice geotagate 1490/1550 nm, salvate local pe telefon.",
