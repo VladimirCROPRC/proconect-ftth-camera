@@ -108,6 +108,16 @@ function FieldApp() {
     refreshReadings(projectId);
   }, [projectId, refreshReadings]);
 
+  // Re-attach the live stream whenever we go back to the preview (after "Refă fotografia")
+  useEffect(() => {
+    const video = videoRef.current;
+    const stream = streamRef.current;
+    if (shot || !cameraOn || !video || !stream) return;
+    if (video.srcObject !== stream) video.srcObject = stream;
+    void video.play().catch(() => undefined);
+  }, [shot, cameraOn]);
+
+
   const startCamera = async () => {
     setCameraError(null);
     try {
