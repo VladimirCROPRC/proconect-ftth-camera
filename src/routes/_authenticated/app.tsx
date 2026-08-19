@@ -5,7 +5,6 @@ import {
   Camera,
   CloudUpload,
   Crosshair,
-  ExternalLink,
   LayoutDashboard,
   Loader2,
   LogOut,
@@ -29,12 +28,12 @@ export const Route = createFileRoute("/_authenticated/app")({
       {
         name: "description",
         content:
-          "Fotografiază powermetrul, valorile 1490/1550 nm sunt citite automat și urcate în folderul proiectului pe Google Drive.",
+          "Fotografiază powermetrul, valorile 1490/1550 nm sunt citite automat, iar fotografia este marcată cu data și coordonatele GPS.",
       },
       { property: "og:title", content: "Măsurători de teren · PRO CONECT GIS TOOLS" },
       {
         property: "og:description",
-        content: "Capturi geotagate, valori optice și sincronizare automată în Google Drive.",
+        content: "Capturi geotagate cu dată, coordonate și valori optice 1490/1550 nm.",
       },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
@@ -48,6 +47,42 @@ type Coords = { lat: number; lng: number; accuracy: number } | null;
 function fmt(v: number | null) {
   return v === null ? "—" : v.toFixed(2);
 }
+
+/** Burns a timestamp + GPS coordinates band onto the bottom of the photo. */
+async function stampPhoto(dataUrl: string, takenAt: Date, coords: Coords): Promise<string> {
+  const img = new Image();
+  img.src = dataUrl;
+  await new Promise<void>((resolve, reject) => {
+    img.onload = () => resolve();
+    img.onerror = () => reject(new Error("imagine invalidă"));
+  });
+  const canvas = document.createElement("canvas");
+  canvas.width = img.naturalWidth;
+  canvas.height = img.naturalHeight;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return dataUrl;
+  ctx.drawImage(img, 0, 0);
+
+  const lines = [
+    takenAt.toLocaleString("ro-RO"),
+    coords
+      ? `${coords.lat.toFixed(6)}, ${coords.lng.toFixed(6)}  ±${Math.round(coords.accuracy)} m`
+      : "GPS indisponibil",
+  ];
+  const size = Math.max(16, Math.round(canvas.width * 0.032));
+  const pad = Math.round(size * 0.55);
+  const bandH = lines.length * (size * 1.28) + pad * 2;
+  ctx.fillStyle = "rgba(0, 45, 88, 0.72)";
+  ctx.fillRect(0, canvas.height - bandH, canvas.width, bandH);
+  ctx.fillStyle = "#ffffff";
+  ctx.textBaseline = "top";
+  ctx.font = `600 ${size}px ui-monospace, "JetBrains Mono", monospace`;
+  lines.forEach((line, i) => {
+    ctx.fillText(line, pad, canvas.height - bandH + pad + i * size * 1.28);
+  });
+  return canvas.toDataURL("image/jpeg", 0.88);
+}
+
 
 function FieldApp() {
   const navigate = useNavigate();
@@ -68,6 +103,9 @@ function FieldApp() {
   const [cameraOn, setCameraOn] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [shot, setShot] = useState<string | null>(null);
+  const [takenAt, setTakenAt] = useState<Date | null>(null);
+  const [stamped, setStamped] = useState<string | null>(null);
+
   const [coords, setCoords] = useState<Coords>(null);
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [reading, setReading] = useState(false);
@@ -175,6 +213,8 @@ function FieldApp() {
     canvas.height = video.videoHeight;
     canvas.getContext("2d")?.drawImage(video, 0, 0);
     const dataUrl = canvas.toDataURL("image/jpeg", 0.85);
+    setStamped(null);
+    setTakenAt(new Date());
     setShot(dataUrl);
     locate();
     await interpret(dataUrl);
@@ -184,12 +224,32 @@ function FieldApp() {
     const fr = new FileReader();
     fr.onload = async () => {
       const dataUrl = String(fr.result);
+      setStamped(null);
+      setTakenAt(new Date());
       setShot(dataUrl);
       locate();
       await interpret(dataUrl);
     };
     fr.readAsDataURL(file);
   };
+
+  // Burn timestamp + coordinates into the photo (re-runs when GPS lands)
+  useEffect(() => {
+    if (!shot || !takenAt) {
+      setStamped(null);
+      return;
+    }
+    let active = true;
+    stampPhoto(shot, takenAt, coords)
+      .then((out) => {
+        if (active) setStamped(out);
+      })
+      .catch(() => undefined);
+    return () => {
+      active = false;
+    };
+  }, [shot, takenAt, coords]);
+
 
   const ready = Boolean(shot) && projectId !== "" && odb.trim() !== "";
 
@@ -200,7 +260,9 @@ function FieldApp() {
     setSaved(null);
     const num = (s: string) => (s.trim() === "" || Number.isNaN(Number(s)) ? null : Number(s));
     try {
-      const result = await upload({
+      const finalPhoto =
+        stamped ?? (takenAt ? await stampPhoto(shot, takenAt, coords).catch(() => shot) : shot);
+      await upload({
         data: {
           projectId,
           odbName: odb.trim(),
@@ -211,22 +273,25 @@ function FieldApp() {
           lat: coords?.lat ?? null,
           lng: coords?.lng ?? null,
           accuracy: coords?.accuracy ?? null,
-          imageBase64: shot.split(",")[1] ?? "",
+          imageBase64: finalPhoto.split(",")[1] ?? "",
         },
       });
-      setSaved(result.driveFileUrl);
+      setSaved("ok");
       setShot(null);
+      setStamped(null);
+      setTakenAt(null);
       setV1490("");
       setV1550("");
       setOdb("");
       setAiNotes(null);
       refreshReadings(projectId);
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "Salvarea în Google Drive a eșuat.");
+      setSaveError(e instanceof Error ? e.message : "Salvarea măsurătorii a eșuat.");
     } finally {
       setSaving(false);
     }
   };
+
 
   const logout = async () => {
     await signOut();
@@ -270,9 +335,7 @@ function FieldApp() {
       <div className="grid gap-4 lg:grid-cols-3">
         <section className="panel-surface p-4 lg:col-span-3">
           <label htmlFor="project" className="block">
-            <span className="mb-1.5 block text-[11px] font-bold text-muted-foreground">
-              Proiect (folderul din Google Drive)
-            </span>
+            <span className="mb-1.5 block text-[11px] font-bold text-muted-foreground">Proiect</span>
             <select
               id="project"
               value={projectId}
@@ -292,18 +355,7 @@ function FieldApp() {
               Nu ai încă proiecte alocate. Cere administratorului să te aloce pe un proiect.
             </p>
           )}
-          {project?.driveFolderUrl && (
-            <div className="mt-2 flex flex-wrap gap-3 text-[11px] font-bold text-brand">
-              <a href={project.driveFolderUrl} target="_blank" rel="noopener" className="flex items-center gap-1">
-                <ExternalLink className="size-3.5" /> Folder Drive
-              </a>
-              {project.spreadsheetUrl && (
-                <a href={project.spreadsheetUrl} target="_blank" rel="noopener" className="flex items-center gap-1">
-                  <ExternalLink className="size-3.5" /> Fișier Excel/Sheet
-                </a>
-              )}
-            </div>
-          )}
+
         </section>
 
         <section className="panel-surface relative min-h-[280px] overflow-hidden">
@@ -319,7 +371,7 @@ function FieldApp() {
             {shot ? (
               <>
                 <img
-                  src={shot}
+                  src={stamped ?? shot}
                   alt="Fotografia powermetrului"
                   className="absolute inset-0 h-full w-full object-cover"
                 />
@@ -492,10 +544,7 @@ function FieldApp() {
         )}
         {saved && (
           <p className="rounded-[10px] bg-[#e7f5f0] px-3.5 py-3 text-[11px] text-[#11694f] lg:col-span-3">
-            Măsurătoarea a fost urcată în folderul proiectului și adăugată în fișierul Excel.{" "}
-            <a href={saved} target="_blank" rel="noopener" className="font-bold underline">
-              Vezi fotografia
-            </a>
+            Măsurătoarea a fost salvată în proiect.
           </p>
         )}
 
@@ -506,8 +555,9 @@ function FieldApp() {
           className="flex min-h-[58px] w-full items-center justify-center gap-3 rounded-[10px] bg-brand px-5 text-[13px] font-bold text-white shadow-[0_8px_22px_rgba(0,91,170,.22)] hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none lg:col-span-3"
         >
           {saving ? <Loader2 className="size-4 animate-spin" /> : <CloudUpload className="size-4" />}
-          {saving ? "Se urcă pe Google Drive…" : "Salvează în proiect"}
+          {saving ? "Se salvează…" : "Salvează în proiect"}
         </button>
+
 
         <section className="lg:col-span-3">
           <h3 className="mb-3 text-base font-semibold">Măsurătorile mele ({rows.length})</h3>
@@ -531,16 +581,6 @@ function FieldApp() {
                       : "fără GPS"}{" "}
                     · {new Date(r.createdAt).toLocaleString("ro-RO")}
                   </p>
-                  {r.driveFileUrl && (
-                    <a
-                      href={r.driveFileUrl}
-                      target="_blank"
-                      rel="noopener"
-                      className="mt-1 inline-flex items-center gap-1 text-[10px] font-bold text-brand"
-                    >
-                      <ExternalLink className="size-3" /> Fotografie
-                    </a>
-                  )}
                 </li>
               ))}
             </ul>
