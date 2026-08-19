@@ -253,16 +253,6 @@ function FieldLog() {
           </button>
         </section>
 
-        <section className="panel-surface p-5 lg:col-span-3">
-          <p className="kicker mb-1.5">Măsurătoare nouă</p>
-          <h2 className="text-[clamp(25px,4vw,34px)] font-semibold tracking-[-0.035em]">
-            Fotografiază. Măsoară. Salvează.
-          </h2>
-          <p className="mt-2 max-w-[760px] text-[13px] leading-[1.55] text-muted-foreground">
-            Fotografia powermetrului, valorile optice citite automat și coordonatele GPS, pregătite
-            într-un singur flux și salvate local pe telefon.
-          </p>
-        </section>
 
         <section className="panel-surface relative min-h-[280px] overflow-hidden">
           <div className="relative h-[280px] bg-black/90">
