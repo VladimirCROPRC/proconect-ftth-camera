@@ -111,3 +111,50 @@ export function dataUrlToBlob(dataUrl: string): Blob {
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return new Blob([bytes], { type: mime });
 }
+
+/** Files for a WhatsApp / native share: one CSV + one JPEG per reading. */
+export function exportFiles(rows: Measurement[]): File[] {
+  const csv = new File([toCsv(rows)], "masuratori-optice.csv", { type: "text/csv" });
+  const photos = rows.map(
+    (r) => new File([dataUrlToBlob(r.photo)], photoFileName(r), { type: "image/jpeg" }),
+  );
+  return [csv, ...photos];
+}
+
+export function shareSummary(rows: Measurement[]): string {
+  const lines = rows.slice(0, 20).map((r) => {
+    const gps = r.lat !== null && r.lng !== null ? `${r.lat.toFixed(5)},${r.lng.toFixed(5)}` : "fara GPS";
+    return `• ${r.label}: 1490 ${r.nm1490 ?? "—"} / 1550 ${r.nm1550 ?? "—"} ${r.unit} · ${gps}`;
+  });
+  const extra = rows.length > 20 ? `\n… si ${rows.length - 20} masuratori in CSV` : "";
+  return `Masuratori optice (${rows.length})\n${lines.join("\n")}${extra}`;
+}
+
+export type ShareResult = "shared" | "downloaded" | "cancelled";
+
+/**
+ * Share the export straight into WhatsApp (or any app) via the native share
+ * sheet. Falls back to wa.me text + local downloads where file sharing is
+ * unsupported (most desktop browsers).
+ */
+export async function shareExport(rows: Measurement[]): Promise<ShareResult> {
+  if (rows.length === 0) return "cancelled";
+  const files = exportFiles(rows);
+  const text = shareSummary(rows);
+
+  const nav = navigator as Navigator & {
+    canShare?: (data: ShareData) => boolean;
+  };
+  if (nav.share && nav.canShare?.({ files })) {
+    try {
+      await nav.share({ files, title: "Masuratori optice", text });
+      return "shared";
+    } catch (e) {
+      if (e instanceof DOMException && e.name === "AbortError") return "cancelled";
+    }
+  }
+
+  files.forEach((f, i) => setTimeout(() => download(f.name, f), 350 * i));
+  window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank", "noopener");
+  return "downloaded";
+}
