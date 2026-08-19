@@ -107,22 +107,3 @@ export async function stampPhoto(
   });
   return canvas.toDataURL("image/jpeg", 0.88);
 }
-
-/** Share all photos through the native share sheet (WhatsApp etc.). */
-export async function sharePhotos(rows: GpsPhoto[]): Promise<"shared" | "downloaded" | "cancelled"> {
-  if (rows.length === 0) return "cancelled";
-  const files = rows.map(
-    (r) => new File([dataUrlToBlob(r.photo)], photoFileName(r), { type: "image/jpeg" }),
-  );
-  const nav = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
-  if (nav.share && nav.canShare?.({ files })) {
-    try {
-      await nav.share({ files, title: "Fotografii GPS" });
-      return "shared";
-    } catch (e) {
-      if (e instanceof DOMException && e.name === "AbortError") return "cancelled";
-    }
-  }
-  files.forEach((f, i) => setTimeout(() => download(f.name, f), 350 * i));
-  return "downloaded";
-}

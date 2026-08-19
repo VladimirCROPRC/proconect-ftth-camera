@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, Crosshair, Download, Share2, Trash2 } from "lucide-react";
+import { Camera, Crosshair, Download, RefreshCw, Trash2, X } from "lucide-react";
 
 import {
   deletePhoto,
@@ -9,7 +9,7 @@ import {
   listPhotos,
   photoFileName,
   savePhoto,
-  sharePhotos,
+  
   stampPhoto,
   type GpsPhoto,
 } from "@/lib/gps-photos";
@@ -48,6 +48,7 @@ function GpsCamera() {
   const [gpsError, setGpsError] = useState<string | null>(null);
   const [rows, setRows] = useState<GpsPhoto[]>([]);
   const [busy, setBusy] = useState(false);
+  const [retakeId, setRetakeId] = useState<string | null>(null);
 
   const refresh = useCallback(() => {
     listPhotos()
@@ -107,13 +108,14 @@ function GpsCamera() {
     try {
       const stamped = await stampPhoto(dataUrl, takenAt, coords).catch(() => dataUrl);
       await savePhoto({
-        id: crypto.randomUUID(),
+        id: retakeId ?? crypto.randomUUID(),
         createdAt: takenAt.toISOString(),
         lat: coords?.lat ?? null,
         lng: coords?.lng ?? null,
         accuracy: coords?.accuracy ?? null,
         photo: stamped,
       });
+      setRetakeId(null);
       refresh();
     } finally {
       setBusy(false);
@@ -138,9 +140,18 @@ function GpsCamera() {
   };
 
   const remove = async (id: string) => {
+    if (retakeId === id) setRetakeId(null);
     await deletePhoto(id);
     refresh();
   };
+
+  const startRetake = async (id: string) => {
+    setRetakeId(id);
+    locate();
+    if (!cameraOn) await startCamera();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
 
   return (
     <div className="mx-auto w-full max-w-[900px] px-3 pb-10 sm:px-5">
@@ -212,7 +223,8 @@ function GpsCamera() {
               disabled={busy}
               className="flex items-center gap-2 rounded-[10px] bg-brand px-3 py-2 text-xs font-bold text-white hover:bg-brand-dark disabled:opacity-50"
             >
-              <Camera className="size-4" /> {busy ? "Se salvează…" : "Fotografiază"}
+              <Camera className="size-4" />{" "}
+              {busy ? "Se salvează…" : retakeId ? "Refă fotografia" : "Fotografiază"}
             </button>
           )}
           <button
@@ -234,13 +246,13 @@ function GpsCamera() {
               e.target.value = "";
             }}
           />
-          {rows.length > 0 && (
+          {retakeId && (
             <button
               type="button"
-              onClick={() => void sharePhotos(rows)}
-              className="ml-auto flex items-center gap-2 rounded-[10px] bg-secondary px-3 py-2 text-xs font-bold text-brand"
+              onClick={() => setRetakeId(null)}
+              className="ml-auto flex items-center gap-1.5 rounded-[10px] bg-secondary px-3 py-2 text-xs font-bold text-brand"
             >
-              <Share2 className="size-4" /> Trimite toate
+              <X className="size-4" /> Anulează refacerea
             </button>
           )}
         </div>
@@ -254,7 +266,10 @@ function GpsCamera() {
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {rows.map((r) => (
-            <li key={r.id} className="panel-surface overflow-hidden">
+            <li
+              key={r.id}
+              className={`panel-surface overflow-hidden ${retakeId === r.id ? "ring-2 ring-brand" : ""}`}
+            >
               <img
                 src={r.photo}
                 alt={`Fotografie din ${new Date(r.createdAt).toLocaleString("ro-RO")}`}
@@ -267,22 +282,30 @@ function GpsCamera() {
                     : "fără GPS"}{" "}
                   · {new Date(r.createdAt).toLocaleString("ro-RO")}
                 </p>
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => download(photoFileName(r), dataUrlToBlob(r.photo))}
-                    className="flex items-center gap-1.5 rounded-lg bg-secondary px-2.5 py-1.5 text-[11px] font-bold text-brand"
+                    onClick={() => void startRetake(r.id)}
+                    className="flex items-center gap-1.5 rounded-lg bg-brand px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-brand-dark"
                   >
-                    <Download className="size-3.5" /> Descarcă
+                    <RefreshCw className="size-3.5" /> Refă
                   </button>
                   <button
                     type="button"
                     onClick={() => void remove(r.id)}
-                    aria-label="Șterge fotografia"
-                    className="ml-auto grid size-8 place-items-center rounded-lg bg-destructive/10 text-destructive"
+                    className="flex items-center gap-1.5 rounded-lg bg-destructive/10 px-2.5 py-1.5 text-[11px] font-bold text-destructive"
                   >
-                    <Trash2 className="size-3.5" />
+                    <Trash2 className="size-3.5" /> Șterge
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => download(photoFileName(r), dataUrlToBlob(r.photo))}
+                    aria-label="Descarcă fotografia"
+                    className="ml-auto grid size-8 place-items-center rounded-lg bg-secondary text-brand"
+                  >
+                    <Download className="size-3.5" />
+                  </button>
+
                 </div>
               </div>
             </li>
