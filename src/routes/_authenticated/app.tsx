@@ -492,10 +492,7 @@ function FieldApp() {
         )}
         {saved && (
           <p className="rounded-[10px] bg-[#e7f5f0] px-3.5 py-3 text-[11px] text-[#11694f] lg:col-span-3">
-            Măsurătoarea a fost urcată în folderul proiectului și adăugată în fișierul Excel.{" "}
-            <a href={saved} target="_blank" rel="noopener" className="font-bold underline">
-              Vezi fotografia
-            </a>
+            Măsurătoarea a fost salvată în proiect.
           </p>
         )}
 
@@ -506,8 +503,9 @@ function FieldApp() {
           className="flex min-h-[58px] w-full items-center justify-center gap-3 rounded-[10px] bg-brand px-5 text-[13px] font-bold text-white shadow-[0_8px_22px_rgba(0,91,170,.22)] hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none lg:col-span-3"
         >
           {saving ? <Loader2 className="size-4 animate-spin" /> : <CloudUpload className="size-4" />}
-          {saving ? "Se urcă pe Google Drive…" : "Salvează în proiect"}
+          {saving ? "Se salvează…" : "Salvează în proiect"}
         </button>
+
 
         <section className="lg:col-span-3">
           <h3 className="mb-3 text-base font-semibold">Măsurătorile mele ({rows.length})</h3>
