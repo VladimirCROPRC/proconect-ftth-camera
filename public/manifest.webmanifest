@@ -2,7 +2,7 @@
   "id": "/",
   "name": "PRO CONECT GIS TOOLS · Măsurători optice",
   "short_name": "Măsurători optice",
-  "description": "Fotografii geotagate ale powermetrului cu valori optice 1490/1550 nm, citite automat și salvate local pe telefon.",
+  "description": "Aplicație de teren PRO CONECT: login, selectare proiect, fotografii geotagate cu marcaj de timp și coordonate, valori optice 1490/1550 nm citite automat.",
   "lang": "ro",
   "dir": "ltr",
   "start_url": "/",
@@ -41,7 +41,7 @@
     {
       "name": "Măsurătoare nouă",
       "short_name": "Măsurătoare",
-      "url": "/",
+      "url": "/app",
       "icons": [{ "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" }]
     }
   ]
