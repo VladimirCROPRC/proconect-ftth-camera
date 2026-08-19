@@ -1,0 +1,17 @@
+{
+  "name": "PRO CONECT GIS TOOLS · Măsurători optice",
+  "short_name": "Măsurători optice",
+  "description": "Fotografii geotagate ale powermetrului cu valori optice 1490/1550 nm, salvate local pe telefon.",
+  "lang": "ro",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f4f7fb",
+  "theme_color": "#005baa",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
