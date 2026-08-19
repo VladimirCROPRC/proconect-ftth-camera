@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ADD COLUMN odb_total integer NOT NULL DEFAULT 0;

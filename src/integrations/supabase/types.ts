@@ -74,6 +74,7 @@ export type Database = {
           id: string
           name: string
           notes: string | null
+          odb_total: number
           spreadsheet_id: string | null
           spreadsheet_url: string | null
         }
@@ -86,6 +87,7 @@ export type Database = {
           id?: string
           name: string
           notes?: string | null
+          odb_total?: number
           spreadsheet_id?: string | null
           spreadsheet_url?: string | null
         }
@@ -98,6 +100,7 @@ export type Database = {
           id?: string
           name?: string
           notes?: string | null
+          odb_total?: number
           spreadsheet_id?: string | null
           spreadsheet_url?: string | null
         }
