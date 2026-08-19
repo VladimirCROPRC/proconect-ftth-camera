@@ -371,7 +371,7 @@ function FieldApp() {
             {shot ? (
               <>
                 <img
-                  src={shot}
+                  src={stamped ?? shot}
                   alt="Fotografia powermetrului"
                   className="absolute inset-0 h-full w-full object-cover"
                 />
