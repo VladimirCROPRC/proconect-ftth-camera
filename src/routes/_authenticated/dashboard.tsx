@@ -277,6 +277,33 @@ function Dashboard() {
                       {p.readingCount} măsurători · creat{" "}
                       {new Date(p.createdAt).toLocaleDateString("ro-RO")}
                     </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-2 text-[11px] font-bold">
+                      <span className="rounded-full bg-brand/10 px-2.5 py-1 text-brand">
+                        ODB total: {p.odbTotal || "—"}
+                      </span>
+                      <span className="rounded-full bg-emerald-500/12 px-2.5 py-1 text-emerald-700">
+                        Finalizate: {p.odbDone}
+                      </span>
+                      <span className="rounded-full bg-amber-500/15 px-2.5 py-1 text-amber-700">
+                        Rămase: {Math.max(0, p.odbTotal - p.odbDone)}
+                      </span>
+                      {p.odbTotal > 0 && (
+                        <span className="text-muted-foreground">
+                          {Math.min(100, Math.round((p.odbDone / p.odbTotal) * 100))}%
+                        </span>
+                      )}
+                    </div>
+                    {p.odbTotal > 0 && (
+                      <div className="mt-2 h-1.5 w-full max-w-[320px] overflow-hidden rounded-full bg-border">
+                        <div
+                          className="h-full rounded-full bg-brand"
+                          style={{
+                            width: `${Math.min(100, (p.odbDone / p.odbTotal) * 100)}%`,
+                          }}
+                        />
+                      </div>
+                    )}
+
                     <div className="mt-2 flex flex-wrap gap-3 text-[11px] font-bold text-brand">
                       {p.driveFolderUrl && (
                         <a href={p.driveFolderUrl} target="_blank" rel="noopener" className="flex items-center gap-1">
