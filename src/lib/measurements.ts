@@ -103,9 +103,10 @@ export function download(name: string, blob: Blob) {
 }
 
 export function dataUrlToBlob(dataUrl: string): Blob {
-  const [meta, b64] = dataUrl.split(",");
+  const [meta = "", b64 = ""] = dataUrl.split(",");
   const mime = /:(.*?);/.exec(meta)?.[1] ?? "image/jpeg";
   const bin = atob(b64);
+
   const bytes = new Uint8Array(bin.length);
   for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
   return new Blob([bytes], { type: mime });
