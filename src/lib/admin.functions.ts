@@ -238,6 +238,7 @@ export const createProject = createServerFn({ method: "POST" })
         name: z.string().trim().min(2).max(120),
         code: z.string().trim().max(60).optional(),
         notes: z.string().trim().max(500).optional(),
+        odbTotal: z.number().int().min(0).max(100000).optional(),
       })
       .parse(data),
   )
