@@ -31,14 +31,33 @@ async function gw(
   headers.set("Authorization", `Bearer ${lovableKey}`);
   headers.set("X-Connection-Api-Key", connKey);
 
-  const res = await fetch(`${GATEWAY}/${connector}${path}`, { ...init, headers });
-  const text = await res.text();
-  if (!res.ok) {
+  // Google occasionally answers 429/500/503 for a few seconds; retry with backoff.
+  const delays = [800, 2000, 4500];
+  let lastStatus = 0;
+  let lastText = "";
+
+  for (let attempt = 0; attempt <= delays.length; attempt++) {
+    const res = await fetch(`${GATEWAY}/${connector}${path}`, { ...init, headers });
+    const text = await res.text();
+    if (res.ok) return text ? (JSON.parse(text) as unknown) : {};
+
+    lastStatus = res.status;
+    lastText = text;
     console.error(`Google API failed [${res.status}] ${connector}${path}: ${text.slice(0, 500)}`);
-    throw new Error(`Google ${connector} a răspuns cu eroare [${res.status}]: ${text.slice(0, 300)}`);
+
+    const retryable = res.status === 429 || res.status >= 500;
+    if (!retryable || attempt === delays.length) break;
+    await new Promise((r) => setTimeout(r, delays[attempt]));
   }
-  return text ? (JSON.parse(text) as unknown) : {};
+
+  if (lastStatus === 429 || lastStatus >= 500) {
+    throw new Error(
+      "Serviciul Google este momentan indisponibil. Încearcă din nou în câteva momente.",
+    );
+  }
+  throw new Error(`Google ${connector} a răspuns cu eroare [${lastStatus}]: ${lastText.slice(0, 300)}`);
 }
+
 
 const SHEET_HEADER = [
   "Data/ora",
