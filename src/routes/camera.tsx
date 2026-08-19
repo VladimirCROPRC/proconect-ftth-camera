@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Camera, Crosshair, Download, Share2, Trash2 } from "lucide-react";
+import { Camera, Crosshair, Download, RefreshCw, Trash2, X } from "lucide-react";
 
 import {
   deletePhoto,
@@ -9,7 +9,7 @@ import {
   listPhotos,
   photoFileName,
   savePhoto,
-  sharePhotos,
+  
   stampPhoto,
   type GpsPhoto,
 } from "@/lib/gps-photos";
@@ -107,13 +107,14 @@ function GpsCamera() {
     try {
       const stamped = await stampPhoto(dataUrl, takenAt, coords).catch(() => dataUrl);
       await savePhoto({
-        id: crypto.randomUUID(),
+        id: retakeId ?? crypto.randomUUID(),
         createdAt: takenAt.toISOString(),
         lat: coords?.lat ?? null,
         lng: coords?.lng ?? null,
         accuracy: coords?.accuracy ?? null,
         photo: stamped,
       });
+      setRetakeId(null);
       refresh();
     } finally {
       setBusy(false);
@@ -138,9 +139,18 @@ function GpsCamera() {
   };
 
   const remove = async (id: string) => {
+    if (retakeId === id) setRetakeId(null);
     await deletePhoto(id);
     refresh();
   };
+
+  const startRetake = async (id: string) => {
+    setRetakeId(id);
+    locate();
+    if (!cameraOn) await startCamera();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
+
 
   return (
     <div className="mx-auto w-full max-w-[900px] px-3 pb-10 sm:px-5">
