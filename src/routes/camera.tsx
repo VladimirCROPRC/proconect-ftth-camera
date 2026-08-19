@@ -222,7 +222,8 @@ function GpsCamera() {
               disabled={busy}
               className="flex items-center gap-2 rounded-[10px] bg-brand px-3 py-2 text-xs font-bold text-white hover:bg-brand-dark disabled:opacity-50"
             >
-              <Camera className="size-4" /> {busy ? "Se salvează…" : "Fotografiază"}
+              <Camera className="size-4" />{" "}
+              {busy ? "Se salvează…" : retakeId ? "Refă fotografia" : "Fotografiază"}
             </button>
           )}
           <button
@@ -244,13 +245,13 @@ function GpsCamera() {
               e.target.value = "";
             }}
           />
-          {rows.length > 0 && (
+          {retakeId && (
             <button
               type="button"
-              onClick={() => void sharePhotos(rows)}
-              className="ml-auto flex items-center gap-2 rounded-[10px] bg-secondary px-3 py-2 text-xs font-bold text-brand"
+              onClick={() => setRetakeId(null)}
+              className="ml-auto flex items-center gap-1.5 rounded-[10px] bg-secondary px-3 py-2 text-xs font-bold text-brand"
             >
-              <Share2 className="size-4" /> Trimite toate
+              <X className="size-4" /> Anulează refacerea
             </button>
           )}
         </div>
@@ -264,7 +265,10 @@ function GpsCamera() {
       ) : (
         <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {rows.map((r) => (
-            <li key={r.id} className="panel-surface overflow-hidden">
+            <li
+              key={r.id}
+              className={`panel-surface overflow-hidden ${retakeId === r.id ? "ring-2 ring-brand" : ""}`}
+            >
               <img
                 src={r.photo}
                 alt={`Fotografie din ${new Date(r.createdAt).toLocaleString("ro-RO")}`}
@@ -277,22 +281,30 @@ function GpsCamera() {
                     : "fără GPS"}{" "}
                   · {new Date(r.createdAt).toLocaleString("ro-RO")}
                 </p>
-                <div className="mt-2 flex gap-2">
+                <div className="mt-2 flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => download(photoFileName(r), dataUrlToBlob(r.photo))}
-                    className="flex items-center gap-1.5 rounded-lg bg-secondary px-2.5 py-1.5 text-[11px] font-bold text-brand"
+                    onClick={() => void startRetake(r.id)}
+                    className="flex items-center gap-1.5 rounded-lg bg-brand px-2.5 py-1.5 text-[11px] font-bold text-white hover:bg-brand-dark"
                   >
-                    <Download className="size-3.5" /> Descarcă
+                    <RefreshCw className="size-3.5" /> Refă
                   </button>
                   <button
                     type="button"
                     onClick={() => void remove(r.id)}
-                    aria-label="Șterge fotografia"
-                    className="ml-auto grid size-8 place-items-center rounded-lg bg-destructive/10 text-destructive"
+                    className="flex items-center gap-1.5 rounded-lg bg-destructive/10 px-2.5 py-1.5 text-[11px] font-bold text-destructive"
                   >
-                    <Trash2 className="size-3.5" />
+                    <Trash2 className="size-3.5" /> Șterge
                   </button>
+                  <button
+                    type="button"
+                    onClick={() => download(photoFileName(r), dataUrlToBlob(r.photo))}
+                    aria-label="Descarcă fotografia"
+                    className="ml-auto grid size-8 place-items-center rounded-lg bg-secondary text-brand"
+                  >
+                    <Download className="size-3.5" />
+                  </button>
+
                 </div>
               </div>
             </li>
