@@ -251,6 +251,8 @@ function FieldApp() {
   }, [shot, takenAt, coords]);
 
 
+  const ready = Boolean(shot) && projectId !== "" && odb.trim() !== "";
+
   const save = async () => {
     if (!shot || !projectId) return;
     setSaving(true);
@@ -258,7 +260,9 @@ function FieldApp() {
     setSaved(null);
     const num = (s: string) => (s.trim() === "" || Number.isNaN(Number(s)) ? null : Number(s));
     try {
-      const result = await upload({
+      const finalPhoto =
+        stamped ?? (takenAt ? await stampPhoto(shot, takenAt, coords).catch(() => shot) : shot);
+      await upload({
         data: {
           projectId,
           odbName: odb.trim(),
@@ -269,22 +273,25 @@ function FieldApp() {
           lat: coords?.lat ?? null,
           lng: coords?.lng ?? null,
           accuracy: coords?.accuracy ?? null,
-          imageBase64: shot.split(",")[1] ?? "",
+          imageBase64: finalPhoto.split(",")[1] ?? "",
         },
       });
-      setSaved(result.driveFileUrl);
+      setSaved("ok");
       setShot(null);
+      setStamped(null);
+      setTakenAt(null);
       setV1490("");
       setV1550("");
       setOdb("");
       setAiNotes(null);
       refreshReadings(projectId);
     } catch (e) {
-      setSaveError(e instanceof Error ? e.message : "Salvarea în Google Drive a eșuat.");
+      setSaveError(e instanceof Error ? e.message : "Salvarea măsurătorii a eșuat.");
     } finally {
       setSaving(false);
     }
   };
+
 
   const logout = async () => {
     await signOut();
