@@ -14,16 +14,191 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      project_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          project_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          project_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          project_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "project_assignments_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          code: string | null
+          created_at: string
+          created_by: string | null
+          drive_folder_id: string | null
+          drive_folder_url: string | null
+          id: string
+          name: string
+          notes: string | null
+          spreadsheet_id: string | null
+          spreadsheet_url: string | null
+        }
+        Insert: {
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          drive_folder_id?: string | null
+          drive_folder_url?: string | null
+          id?: string
+          name: string
+          notes?: string | null
+          spreadsheet_id?: string | null
+          spreadsheet_url?: string | null
+        }
+        Update: {
+          code?: string | null
+          created_at?: string
+          created_by?: string | null
+          drive_folder_id?: string | null
+          drive_folder_url?: string | null
+          id?: string
+          name?: string
+          notes?: string | null
+          spreadsheet_id?: string | null
+          spreadsheet_url?: string | null
+        }
+        Relationships: []
+      }
+      readings: {
+        Row: {
+          accuracy: number | null
+          created_at: string
+          drive_file_id: string | null
+          drive_file_url: string | null
+          id: string
+          lat: number | null
+          lng: number | null
+          nm1490: number | null
+          nm1550: number | null
+          notes: string | null
+          odb_name: string
+          project_id: string
+          unit: string
+          user_id: string
+        }
+        Insert: {
+          accuracy?: number | null
+          created_at?: string
+          drive_file_id?: string | null
+          drive_file_url?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          nm1490?: number | null
+          nm1550?: number | null
+          notes?: string | null
+          odb_name: string
+          project_id: string
+          unit?: string
+          user_id: string
+        }
+        Update: {
+          accuracy?: number | null
+          created_at?: string
+          drive_file_id?: string | null
+          drive_file_url?: string | null
+          id?: string
+          lat?: number | null
+          lng?: number | null
+          nm1490?: number | null
+          nm1550?: number | null
+          notes?: string | null
+          odb_name?: string
+          project_id?: string
+          unit?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "readings_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      is_assigned: {
+        Args: { _project_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "admin" | "supervisor" | "field"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +325,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["admin", "supervisor", "field"],
+    },
   },
 } as const
