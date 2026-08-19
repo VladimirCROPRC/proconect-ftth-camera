@@ -106,6 +106,22 @@ function Dashboard() {
     void refresh();
   }, [refresh, navigate]);
 
+  // Keep the overview live: poll periodically and refresh when the tab regains focus,
+  // so newly uploaded ODB photos update the progress counters automatically.
+  useEffect(() => {
+    const tick = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
+    const id = window.setInterval(tick, 20_000);
+    window.addEventListener("focus", tick);
+    document.addEventListener("visibilitychange", tick);
+    return () => {
+      window.clearInterval(id);
+      window.removeEventListener("focus", tick);
+      document.removeEventListener("visibilitychange", tick);
+    };
+  }, [refresh]);
+
   const run = async (fn: () => Promise<unknown>) => {
     setBusy(true);
     setError(null);
@@ -205,7 +221,7 @@ function Dashboard() {
                   />
                 </label>
                 <label className="grid gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                  Cod
+                  WO Number
                   <input
                     value={newProject.code}
                     onChange={(e) => setNewProject({ ...newProject, code: e.target.value })}
