@@ -3,7 +3,7 @@
     "relation": ["delegate_permission/common.handle_all_urls"],
     "target": {
       "namespace": "android_app",
-      "package_name": "app.proconect_ftth_camera.twa",
+      "package_name": "app.lovable.proconect_ftth_camera.twa",
       "sha256_cert_fingerprints": [
         "F7:09:02:D6:A6:BC:2D:56:83:19:DC:4C:F8:41:6E:CD:6C:BA:C8:39:B7:F1:42:58:90:4D:A1:26:25:D2:AF:F3"
       ]
