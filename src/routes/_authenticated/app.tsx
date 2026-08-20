@@ -692,7 +692,11 @@ function FieldApp() {
         )}
         {saved && (
           <p className="rounded-[10px] bg-[#e7f5f0] px-3.5 py-3 text-[11px] text-[#11694f] lg:col-span-3">
-            Măsurătoarea a fost salvată în proiect.
+            {saved === "queued-ai"
+              ? "Salvat pe telefon. Valorile se citesc automat cu AI la semnal, apoi confirmi trimiterea."
+              : online
+                ? "Salvat pe telefon şi se trimite în proiect."
+                : "Salvat pe telefon. Se trimite automat când revine semnalul."}
           </p>
         )}
 
@@ -703,8 +707,56 @@ function FieldApp() {
           className="flex min-h-[58px] w-full items-center justify-center gap-3 rounded-[10px] bg-brand px-5 text-[13px] font-bold text-white shadow-[0_8px_22px_rgba(0,91,170,.22)] hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none lg:col-span-3"
         >
           {saving ? <Loader2 className="size-4 animate-spin" /> : <CloudUpload className="size-4" />}
-          {saving ? "Se salvează…" : "Salvează în proiect"}
+          {saving ? "Se salvează…" : online ? "Salvează în proiect" : "Salvează offline"}
         </button>
+
+        <section className="lg:col-span-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-base font-semibold">De trimis ({queue.length})</h3>
+            <div className="flex items-center gap-2">
+              <span
+                className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-bold ${
+                  online ? "bg-[#e7f5f0] text-[#11694f]" : "bg-destructive/10 text-destructive"
+                }`}
+              >
+                {online ? <CloudUpload className="size-3.5" /> : <CloudOff className="size-3.5" />}
+                {online ? "Online" : "Offline"}
+              </span>
+              <button
+                type="button"
+                onClick={() => void sync()}
+                disabled={!online || syncing || queue.length === 0}
+                className="flex items-center gap-1.5 rounded-md bg-secondary px-2.5 py-1.5 text-[10px] font-bold text-brand disabled:opacity-45"
+              >
+                {syncing ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-3.5" />
+                )}
+                Sincronizează
+              </button>
+            </div>
+          </div>
+          {queue.length === 0 ? (
+            <p className="panel-surface p-4 text-center text-[11px] text-muted-foreground">
+              Nimic în aşteptare — totul este trimis în proiect.
+            </p>
+          ) : (
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {queue.map((item) => (
+                <QueueCard
+                  key={item.id}
+                  item={item}
+                  onConfirm={confirmQueued}
+                  onRetry={retryQueued}
+                  onDrop={dropQueued}
+                />
+              ))}
+            </ul>
+          )}
+        </section>
+
+
 
 
         <section className="lg:col-span-3">
