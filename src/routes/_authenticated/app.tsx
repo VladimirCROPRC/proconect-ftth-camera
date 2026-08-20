@@ -132,6 +132,11 @@ function FieldApp() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
 
+  const [online, setOnline] = useState(true);
+  const [queue, setQueue] = useState<QueuedReading[]>([]);
+  const [syncing, setSyncing] = useState(false);
+  const syncLock = useRef(false);
+
   const project = projects.find((p) => p.id === projectId) ?? null;
 
   const refreshReadings = useCallback(
@@ -139,21 +144,114 @@ function FieldApp() {
       if (!id) return;
       loadReadings({ data: { projectId: id } })
         .then(setRows)
-        .catch(() => setRows([]));
+        .catch(() => undefined);
     },
     [loadReadings],
   );
 
+  const refreshQueue = useCallback(() => {
+    listQueue()
+      .then(setQueue)
+      .catch(() => setQueue([]));
+  }, []);
+
+  const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Trimiterea a eşuat.");
+
+  /** Uploads every queued item; AI-reads the ones saved without values first. */
+  const sync = useCallback(async () => {
+    if (syncLock.current || typeof navigator === "undefined" || !navigator.onLine) return;
+    syncLock.current = true;
+    setSyncing(true);
+    try {
+      const items = await listQueue();
+      for (const item of items) {
+        if (item.status === "review") continue;
+
+        if (item.status === "needs-ai") {
+          try {
+            const r: PowerReading = await runRead({ data: { imageDataUrl: item.photo } });
+            await putQueued({
+              ...item,
+              nm1490: r.nm1490,
+              nm1550: r.nm1550,
+              unit: r.unit ?? item.unit,
+              notes: r.notes ?? item.notes,
+              aiFilled: true,
+              status: "review",
+              error: null,
+            });
+          } catch (e) {
+            await putQueued({ ...item, error: errMsg(e), attempts: item.attempts + 1 });
+          }
+          continue;
+        }
+
+        try {
+          await upload({
+            data: {
+              projectId: item.projectId,
+              odbName: item.odbName,
+              nm1490: item.nm1490,
+              nm1550: item.nm1550,
+              unit: item.unit,
+              notes: item.notes,
+              lat: item.lat,
+              lng: item.lng,
+              accuracy: item.accuracy,
+              imageBase64: item.photo.split(",")[1] ?? "",
+            },
+          });
+          await removeQueued(item.id);
+        } catch (e) {
+          await putQueued({
+            ...item,
+            status: "error",
+            error: errMsg(e),
+            attempts: item.attempts + 1,
+          });
+        }
+      }
+    } finally {
+      syncLock.current = false;
+      setSyncing(false);
+      refreshQueue();
+      refreshReadings(projectId);
+    }
+  }, [projectId, refreshQueue, refreshReadings, runRead, upload]);
+
   useEffect(() => {
     getSessionInfo().then(setSession).catch(() => undefined);
+    setProjects(cachedProjects().map((p) => ({ ...p, driveFolderUrl: null, spreadsheetUrl: null })));
     loadProjects()
       .then((list) => {
         setProjects(list);
+        cacheProjects(list.map((p) => ({ id: p.id, name: p.name, code: p.code })));
         if (list.length === 1 && list[0]) setProjectId(list[0].id);
       })
-      .catch(() => setProjects([]));
+      .catch(() => undefined);
+    refreshQueue();
     return () => streamRef.current?.getTracks().forEach((t) => t.stop());
-  }, [loadProjects]);
+  }, [loadProjects, refreshQueue]);
+
+  // Connectivity watch + periodic drain of the queue
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    update();
+    const onOnline = () => {
+      update();
+      void sync();
+    };
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", update);
+    void sync();
+    const timer = setInterval(() => void sync(), 30000);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", update);
+      clearInterval(timer);
+    };
+  }, [sync]);
+
 
   useEffect(() => {
     refreshReadings(projectId);
