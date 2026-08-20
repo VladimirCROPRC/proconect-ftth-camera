@@ -300,9 +300,13 @@ function FieldApp() {
   };
 
   const interpret = async (dataUrl: string) => {
-    setReading(true);
     setAiError(null);
     setAiNotes(null);
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setAiNotes("Fără semnal — valorile se citesc automat la revenirea semnalului sau le poți scrie acum.");
+      return;
+    }
+    setReading(true);
     try {
       const r: PowerReading = await runRead({ data: { imageDataUrl: dataUrl } });
       setV1490(r.nm1490 === null ? "" : String(r.nm1490));
@@ -315,6 +319,7 @@ function FieldApp() {
       setReading(false);
     }
   };
+
 
   const capture = async () => {
     const video = videoRef.current;
