@@ -3,12 +3,15 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Camera,
+  CloudOff,
   CloudUpload,
   Crosshair,
   LayoutDashboard,
   Loader2,
   LogOut,
+  RefreshCw,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 
 import { readPowerMeter, type PowerReading } from "@/lib/powermeter.functions";
@@ -19,7 +22,17 @@ import {
   type FieldProject,
   type MyReading,
 } from "@/lib/field.functions";
+import {
+  cacheProjects,
+  cachedProjects,
+  listQueue,
+  putQueued,
+  removeQueued,
+  statusLabel,
+  type QueuedReading,
+} from "@/lib/offline-queue";
 import { getSessionInfo, signOut, type SessionInfo } from "@/lib/session";
+
 
 export const Route = createFileRoute("/_authenticated/app")({
   head: () => ({
