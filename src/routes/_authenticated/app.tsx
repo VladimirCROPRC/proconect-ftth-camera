@@ -790,3 +790,111 @@ function FieldApp() {
     </div>
   );
 }
+
+function QueueCard({
+  item,
+  onConfirm,
+  onRetry,
+  onDrop,
+}: {
+  item: QueuedReading;
+  onConfirm: (item: QueuedReading, a: string, b: string) => Promise<void>;
+  onRetry: (item: QueuedReading) => Promise<void>;
+  onDrop: (id: string) => Promise<void>;
+}) {
+  const [a, setA] = useState(item.nm1490 === null ? "" : String(item.nm1490));
+  const [b, setB] = useState(item.nm1550 === null ? "" : String(item.nm1550));
+
+  useEffect(() => {
+    setA(item.nm1490 === null ? "" : String(item.nm1490));
+    setB(item.nm1550 === null ? "" : String(item.nm1550));
+  }, [item.nm1490, item.nm1550]);
+
+  const tone =
+    item.status === "error"
+      ? "bg-destructive/10 text-destructive"
+      : item.status === "review"
+        ? "bg-[#fdf1d6] text-[#8a6100]"
+        : "bg-secondary text-brand";
+
+  return (
+    <li className="panel-surface overflow-hidden">
+      <img
+        src={item.photo}
+        alt={`Măsurătoare ${item.odbName}`}
+        className="h-32 w-full object-cover"
+      />
+      <div className="p-3">
+        <div className="flex items-start justify-between gap-2">
+          <p className="min-w-0 truncate text-sm font-semibold">{item.odbName}</p>
+          <span className={`flex-none rounded-md px-2 py-1 text-[9px] font-extrabold ${tone}`}>
+            {statusLabel(item.status)}
+          </span>
+        </div>
+        <p className="readout mt-1 text-[10px] text-muted-foreground">
+          {item.projectLabel || "proiect"} ·{" "}
+          {item.lat !== null && item.lng !== null
+            ? `${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}`
+            : "fără GPS"}{" "}
+          · {new Date(item.createdAt).toLocaleString("ro-RO")}
+        </p>
+
+        {item.status === "review" ? (
+          <>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {[
+                { id: `q1490-${item.id}`, tag: "1490 nm", value: a, set: setA },
+                { id: `q1550-${item.id}`, tag: "1550 nm", value: b, set: setB },
+              ].map((f) => (
+                <label key={f.id} htmlFor={f.id} className="block">
+                  <span className="mb-1 block text-[10px] font-bold text-muted-foreground">
+                    {f.tag}
+                  </span>
+                  <input
+                    id={f.id}
+                    inputMode="decimal"
+                    value={f.value}
+                    onChange={(e) => f.set(e.target.value)}
+                    className="readout h-10 w-full rounded-[10px] border border-border bg-[#fbfcfe] px-2 text-[15px] font-bold outline-none focus:border-brand-2"
+                  />
+                </label>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => void onConfirm(item, a, b)}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-[10px] bg-brand px-3 py-2 text-[11px] font-bold text-white hover:bg-brand-dark"
+            >
+              <CloudUpload className="size-3.5" /> Confirmă & trimite
+            </button>
+          </>
+        ) : (
+          <p className="readout mt-1 text-[12px]">
+            <span className="font-bold text-brand-2">1490</span> {fmt(item.nm1490)}
+            <span className="mx-1.5 text-border">|</span>
+            <span className="font-bold text-[#e2a600]">1550</span> {fmt(item.nm1550)} {item.unit}
+          </p>
+        )}
+
+        {item.error && <p className="mt-1.5 text-[10px] text-destructive">{item.error}</p>}
+
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void onRetry(item)}
+            className="flex items-center gap-1.5 rounded-lg bg-secondary px-2.5 py-1.5 text-[10px] font-bold text-brand"
+          >
+            <RefreshCw className="size-3.5" /> Reîncearcă
+          </button>
+          <button
+            type="button"
+            onClick={() => void onDrop(item.id)}
+            className="ml-auto flex items-center gap-1.5 rounded-lg bg-destructive/10 px-2.5 py-1.5 text-[10px] font-bold text-destructive"
+          >
+            <Trash2 className="size-3.5" /> Şterge
+          </button>
+        </div>
+      </div>
+    </li>
+  );
+}
