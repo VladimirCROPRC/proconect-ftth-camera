@@ -3,12 +3,15 @@ import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Camera,
+  CloudOff,
   CloudUpload,
   Crosshair,
   LayoutDashboard,
   Loader2,
   LogOut,
+  RefreshCw,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 
 import { readPowerMeter, type PowerReading } from "@/lib/powermeter.functions";
@@ -19,7 +22,17 @@ import {
   type FieldProject,
   type MyReading,
 } from "@/lib/field.functions";
+import {
+  cacheProjects,
+  cachedProjects,
+  listQueue,
+  putQueued,
+  removeQueued,
+  statusLabel,
+  type QueuedReading,
+} from "@/lib/offline-queue";
 import { getSessionInfo, signOut, type SessionInfo } from "@/lib/session";
+
 
 export const Route = createFileRoute("/_authenticated/app")({
   head: () => ({
@@ -119,6 +132,11 @@ function FieldApp() {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [saved, setSaved] = useState<string | null>(null);
 
+  const [online, setOnline] = useState(true);
+  const [queue, setQueue] = useState<QueuedReading[]>([]);
+  const [syncing, setSyncing] = useState(false);
+  const syncLock = useRef(false);
+
   const project = projects.find((p) => p.id === projectId) ?? null;
 
   const refreshReadings = useCallback(
@@ -126,21 +144,114 @@ function FieldApp() {
       if (!id) return;
       loadReadings({ data: { projectId: id } })
         .then(setRows)
-        .catch(() => setRows([]));
+        .catch(() => undefined);
     },
     [loadReadings],
   );
 
+  const refreshQueue = useCallback(() => {
+    listQueue()
+      .then(setQueue)
+      .catch(() => setQueue([]));
+  }, []);
+
+  const errMsg = (e: unknown) => (e instanceof Error ? e.message : "Trimiterea a eşuat.");
+
+  /** Uploads every queued item; AI-reads the ones saved without values first. */
+  const sync = useCallback(async () => {
+    if (syncLock.current || typeof navigator === "undefined" || !navigator.onLine) return;
+    syncLock.current = true;
+    setSyncing(true);
+    try {
+      const items = await listQueue();
+      for (const item of items) {
+        if (item.status === "review") continue;
+
+        if (item.status === "needs-ai") {
+          try {
+            const r: PowerReading = await runRead({ data: { imageDataUrl: item.photo } });
+            await putQueued({
+              ...item,
+              nm1490: r.nm1490,
+              nm1550: r.nm1550,
+              unit: r.unit ?? item.unit,
+              notes: r.notes ?? item.notes,
+              aiFilled: true,
+              status: "review",
+              error: null,
+            });
+          } catch (e) {
+            await putQueued({ ...item, error: errMsg(e), attempts: item.attempts + 1 });
+          }
+          continue;
+        }
+
+        try {
+          await upload({
+            data: {
+              projectId: item.projectId,
+              odbName: item.odbName,
+              nm1490: item.nm1490,
+              nm1550: item.nm1550,
+              unit: item.unit,
+              notes: item.notes,
+              lat: item.lat,
+              lng: item.lng,
+              accuracy: item.accuracy,
+              imageBase64: item.photo.split(",")[1] ?? "",
+            },
+          });
+          await removeQueued(item.id);
+        } catch (e) {
+          await putQueued({
+            ...item,
+            status: "error",
+            error: errMsg(e),
+            attempts: item.attempts + 1,
+          });
+        }
+      }
+    } finally {
+      syncLock.current = false;
+      setSyncing(false);
+      refreshQueue();
+      refreshReadings(projectId);
+    }
+  }, [projectId, refreshQueue, refreshReadings, runRead, upload]);
+
   useEffect(() => {
     getSessionInfo().then(setSession).catch(() => undefined);
+    setProjects(cachedProjects().map((p) => ({ ...p, driveFolderUrl: null, spreadsheetUrl: null })));
     loadProjects()
       .then((list) => {
         setProjects(list);
+        cacheProjects(list.map((p) => ({ id: p.id, name: p.name, code: p.code })));
         if (list.length === 1 && list[0]) setProjectId(list[0].id);
       })
-      .catch(() => setProjects([]));
+      .catch(() => undefined);
+    refreshQueue();
     return () => streamRef.current?.getTracks().forEach((t) => t.stop());
-  }, [loadProjects]);
+  }, [loadProjects, refreshQueue]);
+
+  // Connectivity watch + periodic drain of the queue
+  useEffect(() => {
+    const update = () => setOnline(navigator.onLine);
+    update();
+    const onOnline = () => {
+      update();
+      void sync();
+    };
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", update);
+    void sync();
+    const timer = setInterval(() => void sync(), 30000);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", update);
+      clearInterval(timer);
+    };
+  }, [sync]);
+
 
   useEffect(() => {
     refreshReadings(projectId);
@@ -189,9 +300,13 @@ function FieldApp() {
   };
 
   const interpret = async (dataUrl: string) => {
-    setReading(true);
     setAiError(null);
     setAiNotes(null);
+    if (typeof navigator !== "undefined" && !navigator.onLine) {
+      setAiNotes("Fără semnal — valorile se citesc automat la revenirea semnalului sau le poți scrie acum.");
+      return;
+    }
+    setReading(true);
     try {
       const r: PowerReading = await runRead({ data: { imageDataUrl: dataUrl } });
       setV1490(r.nm1490 === null ? "" : String(r.nm1490));
@@ -204,6 +319,7 @@ function FieldApp() {
       setReading(false);
     }
   };
+
 
   const capture = async () => {
     const video = videoRef.current;
@@ -262,21 +378,29 @@ function FieldApp() {
     try {
       const finalPhoto =
         stamped ?? (takenAt ? await stampPhoto(shot, takenAt, coords).catch(() => shot) : shot);
-      await upload({
-        data: {
-          projectId,
-          odbName: odb.trim(),
-          nm1490: num(v1490),
-          nm1550: num(v1550),
-          unit,
-          notes: aiNotes,
-          lat: coords?.lat ?? null,
-          lng: coords?.lng ?? null,
-          accuracy: coords?.accuracy ?? null,
-          imageBase64: finalPhoto.split(",")[1] ?? "",
-        },
+      const n1490 = num(v1490);
+      const n1550 = num(v1550);
+      const hasValues = n1490 !== null || n1550 !== null;
+      await putQueued({
+        id: crypto.randomUUID(),
+        projectId,
+        projectLabel: project ? (project.code ? `${project.code} — ${project.name}` : project.name) : "",
+        odbName: odb.trim(),
+        nm1490: n1490,
+        nm1550: n1550,
+        unit,
+        notes: aiNotes,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
+        accuracy: coords?.accuracy ?? null,
+        photo: finalPhoto,
+        createdAt: (takenAt ?? new Date()).toISOString(),
+        status: hasValues ? "pending" : "needs-ai",
+        error: null,
+        attempts: 0,
+        aiFilled: false,
       });
-      setSaved("ok");
+      setSaved(hasValues ? "queued" : "queued-ai");
       setShot(null);
       setStamped(null);
       setTakenAt(null);
@@ -284,13 +408,39 @@ function FieldApp() {
       setV1550("");
       setOdb("");
       setAiNotes(null);
-      refreshReadings(projectId);
+      refreshQueue();
+      void sync();
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Salvarea măsurătorii a eșuat.");
     } finally {
       setSaving(false);
     }
   };
+
+  const confirmQueued = async (item: QueuedReading, a: string, b: string) => {
+    const num = (s: string) => (s.trim() === "" || Number.isNaN(Number(s)) ? null : Number(s));
+    await putQueued({
+      ...item,
+      nm1490: num(a),
+      nm1550: num(b),
+      status: "pending",
+      error: null,
+    });
+    refreshQueue();
+    void sync();
+  };
+
+  const retryQueued = async (item: QueuedReading) => {
+    await putQueued({ ...item, status: item.aiFilled || item.nm1490 !== null || item.nm1550 !== null ? "pending" : "needs-ai", error: null });
+    refreshQueue();
+    void sync();
+  };
+
+  const dropQueued = async (id: string) => {
+    await removeQueued(id);
+    refreshQueue();
+  };
+
 
 
   const logout = async () => {
@@ -542,7 +692,11 @@ function FieldApp() {
         )}
         {saved && (
           <p className="rounded-[10px] bg-[#e7f5f0] px-3.5 py-3 text-[11px] text-[#11694f] lg:col-span-3">
-            Măsurătoarea a fost salvată în proiect.
+            {saved === "queued-ai"
+              ? "Salvat pe telefon. Valorile se citesc automat cu AI la semnal, apoi confirmi trimiterea."
+              : online
+                ? "Salvat pe telefon şi se trimite în proiect."
+                : "Salvat pe telefon. Se trimite automat când revine semnalul."}
           </p>
         )}
 
@@ -553,8 +707,56 @@ function FieldApp() {
           className="flex min-h-[58px] w-full items-center justify-center gap-3 rounded-[10px] bg-brand px-5 text-[13px] font-bold text-white shadow-[0_8px_22px_rgba(0,91,170,.22)] hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-45 disabled:shadow-none lg:col-span-3"
         >
           {saving ? <Loader2 className="size-4 animate-spin" /> : <CloudUpload className="size-4" />}
-          {saving ? "Se salvează…" : "Salvează în proiect"}
+          {saving ? "Se salvează…" : online ? "Salvează în proiect" : "Salvează offline"}
         </button>
+
+        <section className="lg:col-span-3">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h3 className="text-base font-semibold">De trimis ({queue.length})</h3>
+            <div className="flex items-center gap-2">
+              <span
+                className={`flex items-center gap-1.5 rounded-md px-2 py-1 text-[10px] font-bold ${
+                  online ? "bg-[#e7f5f0] text-[#11694f]" : "bg-destructive/10 text-destructive"
+                }`}
+              >
+                {online ? <CloudUpload className="size-3.5" /> : <CloudOff className="size-3.5" />}
+                {online ? "Online" : "Offline"}
+              </span>
+              <button
+                type="button"
+                onClick={() => void sync()}
+                disabled={!online || syncing || queue.length === 0}
+                className="flex items-center gap-1.5 rounded-md bg-secondary px-2.5 py-1.5 text-[10px] font-bold text-brand disabled:opacity-45"
+              >
+                {syncing ? (
+                  <Loader2 className="size-3.5 animate-spin" />
+                ) : (
+                  <RefreshCw className="size-3.5" />
+                )}
+                Sincronizează
+              </button>
+            </div>
+          </div>
+          {queue.length === 0 ? (
+            <p className="panel-surface p-4 text-center text-[11px] text-muted-foreground">
+              Nimic în aşteptare — totul este trimis în proiect.
+            </p>
+          ) : (
+            <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {queue.map((item) => (
+                <QueueCard
+                  key={item.id}
+                  item={item}
+                  onConfirm={confirmQueued}
+                  onRetry={retryQueued}
+                  onDrop={dropQueued}
+                />
+              ))}
+            </ul>
+          )}
+        </section>
+
+
 
 
         <section className="lg:col-span-3">
@@ -586,5 +788,113 @@ function FieldApp() {
         </section>
       </div>
     </div>
+  );
+}
+
+function QueueCard({
+  item,
+  onConfirm,
+  onRetry,
+  onDrop,
+}: {
+  item: QueuedReading;
+  onConfirm: (item: QueuedReading, a: string, b: string) => Promise<void>;
+  onRetry: (item: QueuedReading) => Promise<void>;
+  onDrop: (id: string) => Promise<void>;
+}) {
+  const [a, setA] = useState(item.nm1490 === null ? "" : String(item.nm1490));
+  const [b, setB] = useState(item.nm1550 === null ? "" : String(item.nm1550));
+
+  useEffect(() => {
+    setA(item.nm1490 === null ? "" : String(item.nm1490));
+    setB(item.nm1550 === null ? "" : String(item.nm1550));
+  }, [item.nm1490, item.nm1550]);
+
+  const tone =
+    item.status === "error"
+      ? "bg-destructive/10 text-destructive"
+      : item.status === "review"
+        ? "bg-[#fdf1d6] text-[#8a6100]"
+        : "bg-secondary text-brand";
+
+  return (
+    <li className="panel-surface overflow-hidden">
+      <img
+        src={item.photo}
+        alt={`Măsurătoare ${item.odbName}`}
+        className="h-32 w-full object-cover"
+      />
+      <div className="p-3">
+        <div className="flex items-start justify-between gap-2">
+          <p className="min-w-0 truncate text-sm font-semibold">{item.odbName}</p>
+          <span className={`flex-none rounded-md px-2 py-1 text-[9px] font-extrabold ${tone}`}>
+            {statusLabel(item.status)}
+          </span>
+        </div>
+        <p className="readout mt-1 text-[10px] text-muted-foreground">
+          {item.projectLabel || "proiect"} ·{" "}
+          {item.lat !== null && item.lng !== null
+            ? `${item.lat.toFixed(5)}, ${item.lng.toFixed(5)}`
+            : "fără GPS"}{" "}
+          · {new Date(item.createdAt).toLocaleString("ro-RO")}
+        </p>
+
+        {item.status === "review" ? (
+          <>
+            <div className="mt-2 grid grid-cols-2 gap-2">
+              {[
+                { id: `q1490-${item.id}`, tag: "1490 nm", value: a, set: setA },
+                { id: `q1550-${item.id}`, tag: "1550 nm", value: b, set: setB },
+              ].map((f) => (
+                <label key={f.id} htmlFor={f.id} className="block">
+                  <span className="mb-1 block text-[10px] font-bold text-muted-foreground">
+                    {f.tag}
+                  </span>
+                  <input
+                    id={f.id}
+                    inputMode="decimal"
+                    value={f.value}
+                    onChange={(e) => f.set(e.target.value)}
+                    className="readout h-10 w-full rounded-[10px] border border-border bg-[#fbfcfe] px-2 text-[15px] font-bold outline-none focus:border-brand-2"
+                  />
+                </label>
+              ))}
+            </div>
+            <button
+              type="button"
+              onClick={() => void onConfirm(item, a, b)}
+              className="mt-2 flex w-full items-center justify-center gap-2 rounded-[10px] bg-brand px-3 py-2 text-[11px] font-bold text-white hover:bg-brand-dark"
+            >
+              <CloudUpload className="size-3.5" /> Confirmă & trimite
+            </button>
+          </>
+        ) : (
+          <p className="readout mt-1 text-[12px]">
+            <span className="font-bold text-brand-2">1490</span> {fmt(item.nm1490)}
+            <span className="mx-1.5 text-border">|</span>
+            <span className="font-bold text-[#e2a600]">1550</span> {fmt(item.nm1550)} {item.unit}
+          </p>
+        )}
+
+        {item.error && <p className="mt-1.5 text-[10px] text-destructive">{item.error}</p>}
+
+        <div className="mt-2 flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => void onRetry(item)}
+            className="flex items-center gap-1.5 rounded-lg bg-secondary px-2.5 py-1.5 text-[10px] font-bold text-brand"
+          >
+            <RefreshCw className="size-3.5" /> Reîncearcă
+          </button>
+          <button
+            type="button"
+            onClick={() => void onDrop(item.id)}
+            className="ml-auto flex items-center gap-1.5 rounded-lg bg-destructive/10 px-2.5 py-1.5 text-[10px] font-bold text-destructive"
+          >
+            <Trash2 className="size-3.5" /> Şterge
+          </button>
+        </div>
+      </div>
+    </li>
   );
 }
