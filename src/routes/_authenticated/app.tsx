@@ -378,21 +378,29 @@ function FieldApp() {
     try {
       const finalPhoto =
         stamped ?? (takenAt ? await stampPhoto(shot, takenAt, coords).catch(() => shot) : shot);
-      await upload({
-        data: {
-          projectId,
-          odbName: odb.trim(),
-          nm1490: num(v1490),
-          nm1550: num(v1550),
-          unit,
-          notes: aiNotes,
-          lat: coords?.lat ?? null,
-          lng: coords?.lng ?? null,
-          accuracy: coords?.accuracy ?? null,
-          imageBase64: finalPhoto.split(",")[1] ?? "",
-        },
+      const n1490 = num(v1490);
+      const n1550 = num(v1550);
+      const hasValues = n1490 !== null || n1550 !== null;
+      await putQueued({
+        id: crypto.randomUUID(),
+        projectId,
+        projectLabel: project ? (project.code ? `${project.code} — ${project.name}` : project.name) : "",
+        odbName: odb.trim(),
+        nm1490: n1490,
+        nm1550: n1550,
+        unit,
+        notes: aiNotes,
+        lat: coords?.lat ?? null,
+        lng: coords?.lng ?? null,
+        accuracy: coords?.accuracy ?? null,
+        photo: finalPhoto,
+        createdAt: (takenAt ?? new Date()).toISOString(),
+        status: hasValues ? "pending" : "needs-ai",
+        error: null,
+        attempts: 0,
+        aiFilled: false,
       });
-      setSaved("ok");
+      setSaved(hasValues ? "queued" : "queued-ai");
       setShot(null);
       setStamped(null);
       setTakenAt(null);
@@ -400,13 +408,39 @@ function FieldApp() {
       setV1550("");
       setOdb("");
       setAiNotes(null);
-      refreshReadings(projectId);
+      refreshQueue();
+      void sync();
     } catch (e) {
       setSaveError(e instanceof Error ? e.message : "Salvarea măsurătorii a eșuat.");
     } finally {
       setSaving(false);
     }
   };
+
+  const confirmQueued = async (item: QueuedReading, a: string, b: string) => {
+    const num = (s: string) => (s.trim() === "" || Number.isNaN(Number(s)) ? null : Number(s));
+    await putQueued({
+      ...item,
+      nm1490: num(a),
+      nm1550: num(b),
+      status: "pending",
+      error: null,
+    });
+    refreshQueue();
+    void sync();
+  };
+
+  const retryQueued = async (item: QueuedReading) => {
+    await putQueued({ ...item, status: item.aiFilled || item.nm1490 !== null || item.nm1550 !== null ? "pending" : "needs-ai", error: null });
+    refreshQueue();
+    void sync();
+  };
+
+  const dropQueued = async (id: string) => {
+    await removeQueued(id);
+    refreshQueue();
+  };
+
 
 
   const logout = async () => {
