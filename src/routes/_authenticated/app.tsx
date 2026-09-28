@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ArrowLeft,
   Camera,
   CloudOff,
   CloudUpload,
@@ -463,6 +464,12 @@ function FieldApp() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <a
+            href="https://portal.proconect.online"
+            className="flex items-center gap-1.5 rounded-xl border border-white/50 bg-white/10 px-3 py-2 text-[11px] font-bold"
+          >
+            <ArrowLeft className="size-4" /> Înapoi în portal
+          </a>
           {session && session.role !== "field" && (
             <Link
               to="/dashboard"

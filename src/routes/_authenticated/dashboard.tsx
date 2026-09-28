@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useCallback, useEffect, useState } from "react";
 import {
+  ArrowLeft,
   Camera,
   ExternalLink,
   FolderPlus,
@@ -155,6 +156,12 @@ function Dashboard() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <a
+            href="https://portal.proconect.online"
+            className="flex items-center gap-1.5 rounded-xl border border-white/50 bg-white/10 px-3 py-2 text-[11px] font-bold"
+          >
+            <ArrowLeft className="size-4" /> Înapoi în portal
+          </a>
           <Link
             to="/app"
             className="flex items-center gap-1.5 rounded-xl border border-white/50 bg-white/10 px-3 py-2 text-[11px] font-bold"
